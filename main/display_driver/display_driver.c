@@ -9,6 +9,7 @@
 
 static const char *TAG = "Display";
 
+static uint16_t *display_data = NULL;
 static esp_lcd_touch_handle_t tp = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -65,17 +66,13 @@ int display_brightness_get(void) {
     return brightness * 100 / 255;
 }
 
-esp_err_t display_new(const display_config_t *config, esp_lcd_panel_handle_t *ret_panel, esp_lcd_panel_io_handle_t *ret_io) {
+esp_err_t display_new() {
     esp_err_t ret = ESP_OK;
-    assert(config != NULL && config->max_transfer_sz > 0);
+
+    int max_transfer_sz = LCD_W * LCD_H * 2;
 
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(LCD_PCLK,
-                                                                 LCD_DATA0,
-                                                                 LCD_DATA1,
-                                                                 LCD_DATA2,
-                                                                 LCD_DATA3,
-                                                                 config->max_transfer_sz);
+    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(LCD_PCLK, LCD_DATA0, LCD_DATA1, LCD_DATA2, LCD_DATA3, max_transfer_sz);
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_SPI_NUM, &buscfg, SPI_DMA_CH_AUTO));
 
     const esp_lcd_panel_io_spi_config_t io_config = SH8601_PANEL_IO_QSPI_CONFIG(LCD_CS, NULL, NULL);
@@ -100,15 +97,16 @@ esp_err_t display_new(const display_config_t *config, esp_lcd_panel_handle_t *re
     esp_lcd_panel_set_gap(panel_handle, 0x16, 0);
     esp_lcd_panel_disp_on_off(panel_handle, true);
 
-    if(ret_panel)
-        *ret_panel = panel_handle;
-    if(ret_io)
-        *ret_io = io_handle;
+    display_data = heap_caps_malloc(LCD_W * LCD_H * sizeof(uint16_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if(!display_data) {
+        ESP_LOGE(TAG, "Failed to allocate framebuffer!");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     return ret;
 }
 
 esp_err_t touch_new(esp_lcd_touch_handle_t *ret_touch) {
-    /* Initialize touch */
     const esp_lcd_touch_config_t tp_cfg = {
         .x_max = LCD_W,
         .y_max = LCD_H,
@@ -129,4 +127,39 @@ esp_err_t touch_new(esp_lcd_touch_handle_t *ret_touch) {
     tp_io_config.scl_speed_hz = 400000;
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(i2c_get_handle(), &tp_io_config, &tp_io_handle), TAG, "");
     return esp_lcd_touch_new_i2c_ft5x06(tp_io_handle, &tp_cfg, ret_touch);
+}
+
+void display_flush(void) {
+    esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, LCD_W, LCD_H, display_data);
+}
+
+void display_set_pixel(int x, int y, uint16_t color) {
+    display_data[y * LCD_W + x] = color;
+}
+
+void display_fill(uint16_t color) {
+    for(int i = 0; i < LCD_W * LCD_H; i++) display_data[i] = color;
+}
+
+void display_draw_dot(int x, int y, uint16_t color) {
+    for(int dy = -8; dy <= 8; dy++) {
+        for(int dx = -8; dx <= 8; dx++) {
+            int px = x + dx, py = y + dy;
+            if(px >= 0 && px < LCD_W && py >= 0 && py < LCD_H)
+                display_set_pixel(px, py, color);
+        }
+    }
+}
+
+void display_draw_line(int x0, int y0, int x1, int y1, uint16_t color) {
+    int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
+    int dy = -abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
+    int err = dx + dy;
+    while(1) {
+        display_draw_dot(x0, y0, color);
+        if(x0 == x1 && y0 == y1) break;
+        int e2 = 2 * err;
+        if(e2 >= dy) { err += dy; x0 += sx; }
+        if(e2 <= dx) { err += dx; y0 += sy; }
+    }
 }

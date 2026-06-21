@@ -14,14 +14,20 @@
 #define LCD_W               (410)
 #define LCD_H               (502)
 
-typedef struct {
-    int max_transfer_sz;
-} display_config_t;
-
-esp_err_t display_new(const display_config_t *config, esp_lcd_panel_handle_t *ret_panel, esp_lcd_panel_io_handle_t *ret_io);
+esp_err_t display_new();
 
 esp_err_t display_brightness_set(int brightness_percent);
 
 int display_brightness_get(void);
 
 esp_err_t touch_new(esp_lcd_touch_handle_t *ret_touch);
+
+void display_flush(void);
+
+void display_set_pixel(int x, int y, uint16_t color);
+
+void display_fill(uint16_t color);
+
+void display_draw_dot(int x, int y, uint16_t color);
+
+void display_draw_line(int x0, int y0, int x1, int y1, uint16_t color);
