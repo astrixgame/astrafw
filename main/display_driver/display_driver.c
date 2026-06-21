@@ -7,7 +7,7 @@
 #include "esp_lcd_sh8601.h"
 #include "esp_lcd_touch_ft5x06.h"
 
-static const char *TAG = "Display";
+static const char *TAG = "display";
 
 static uint16_t *display_data = NULL;
 static esp_lcd_touch_handle_t tp = NULL;
@@ -162,4 +162,9 @@ void display_draw_line(int x0, int y0, int x1, int y1, uint16_t color) {
         if(e2 >= dy) { err += dy; x0 += sx; }
         if(e2 <= dx) { err += dx; y0 += sy; }
     }
+}
+
+uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+    uint16_t v = ((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3);
+    return (v >> 8) | (v << 8);
 }

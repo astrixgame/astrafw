@@ -5,7 +5,7 @@
 
 #include "esp_codec_dev_defaults.h"
 
-static const char *TAG = "I2S Driver";
+static const char *TAG = "i2s";
 
 static i2s_chan_handle_t i2s_tx_chan = NULL;
 static i2s_chan_handle_t i2s_rx_chan = NULL;

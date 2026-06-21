@@ -10,7 +10,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-static const char *TAG = "Power";
+static const char *TAG = "power";
 
 #define REG_PMU_STATUS_1        (0x00)
 #define REG_PMU_STATUS_2        (0x01)

@@ -4,7 +4,7 @@
 #include "esp_vfs_fat.h"
 #include "esp_spiffs.h"
 
-static const char *TAG = "Spiffs";
+static const char *TAG = "spiffs";
 
 esp_err_t bsp_spiffs_mount(void) {
     esp_vfs_spiffs_conf_t conf = {

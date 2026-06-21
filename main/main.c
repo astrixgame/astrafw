@@ -13,16 +13,7 @@
 #include "i2s_driver/i2s_driver.h"
 #include "display_driver/display_driver.h"
 
-static const char *TAG = "astrafw";
-
-static inline uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
-    uint16_t v = ((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3);
-    return (v >> 8) | (v << 8);
-}
-
-#define COL_YELLOW rgb565(0xFF, 0xFF, 0x00)
-#define COL_BLACK  rgb565(0x00, 0x00, 0x00)
-#define COL_GREEN  rgb565(0x00, 0xFF, 0x00)
+static const char *TAG = "main";
 
 static TaskHandle_t s_draw_task = NULL;
 
