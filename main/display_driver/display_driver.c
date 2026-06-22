@@ -14,6 +14,7 @@ static esp_lcd_touch_handle_t tp = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 uint8_t brightness;
+static uint16_t s_bg_color = 0;
 
 static const sh8601_lcd_init_cmd_t lcd_init_cmds[] = {
     {0x11, (uint8_t[]){0x00}, 0, 120},
@@ -138,7 +139,24 @@ void display_set_pixel(int x, int y, uint16_t color) {
 }
 
 void display_fill(uint16_t color) {
+    s_bg_color = color;
     for(int i = 0; i < LCD_W * LCD_H; i++) display_data[i] = color;
+}
+
+void display_draw_bitmap(int x, int y, int w, int h, const uint16_t *buf) {
+    for (int row = 0; row < h; row++) {
+        int py = y + row;
+        if (py < 0 || py >= LCD_H) continue;
+        for (int col = 0; col < w; col++) {
+            int px = x + col;
+            if (px < 0 || px >= LCD_W) continue;
+            display_data[py * LCD_W + px] = buf[row * w + col];
+        }
+    }
+}
+
+uint16_t display_get_bg_color(void) {
+    return s_bg_color;
 }
 
 void display_draw_dot(int x, int y, uint16_t color) {

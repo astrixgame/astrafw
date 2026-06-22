@@ -12,6 +12,10 @@
 #include "i2c_driver/i2c_driver.h"
 #include "i2s_driver/i2s_driver.h"
 #include "display_driver/display_driver.h"
+#include "font_render/font_render.h"
+#include "font_render/font_arial_16.h"
+#include "font_render/font_arial_20.h"
+#include "font_render/font_arial_48.h"
 
 static const char *TAG = "main";
 
@@ -58,7 +62,7 @@ static void draw_task(void *arg) {
         bool btn_pressed = (gpio_get_level(BTN_BOOT) == 0);
         if(btn_pressed && !btn_prev_pressed) {
             display_on = false;
-            display_fill(COL_BLACK);
+            display_fill(CLR_BLACK);
             display_flush();
             display_brightness_set(0);
         }
@@ -68,7 +72,7 @@ static void draw_task(void *arg) {
         xTaskNotifyWait(0, ULONG_MAX, &notif, pdMS_TO_TICKS(16));
         if(notif & NOTIFY_PWRKEY) {
             display_on = false;
-            display_fill(COL_BLACK);
+            display_fill(CLR_BLACK);
             display_flush();
             display_brightness_set(0);
         }
@@ -90,7 +94,15 @@ static void draw_task(void *arg) {
         }
 
         if(display_on) {
-            display_fill(COL_GREEN);
+            display_fill(CLR_BLACK);
+
+            const char *title = "AstraFW";
+            int tw = font_measure_string(&font_arial_48, title);
+            font_draw_string(&font_arial_48, (LCD_W - tw) / 2, 40, title, CLR_WHITE);
+
+            font_draw_string(&font_arial_20, 10, 110, "Hello, World!", CLR_YELLOW);
+            font_draw_string(&font_arial_16, 10, 138, "Touch the screen", CLR_WHITE);
+
             display_flush();
         }
     }
@@ -104,7 +116,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(display_new());
     ESP_ERROR_CHECK(display_brightness_set(80));
 
-    display_fill(COL_BLACK);
+    display_fill(CLR_BLACK);
     display_flush();
 
     esp_lcd_touch_handle_t tp = NULL;

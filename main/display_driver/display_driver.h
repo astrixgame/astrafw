@@ -32,6 +32,10 @@ void display_draw_dot(int x, int y, uint16_t color);
 
 void display_draw_line(int x0, int y0, int x1, int y1, uint16_t color);
 
+void display_draw_bitmap(int x, int y, int w, int h, const uint16_t *buf);
+
+uint16_t display_get_bg_color(void);
+
 uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b);
 
 #define CLR_RED    rgb565(0xFF, 0x00, 0x00)
