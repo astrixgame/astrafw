@@ -39,8 +39,8 @@ typedef struct {
 // ---------------------------------------------------------------------------
 
 // Draw a UTF-8 string at pixel (x, y) where y is the TOP of the line.
-// Text is composited over whatever is already in the framebuffer.
-// Call display_flush() after to push to the panel.
+// Text is composited over whatever is already on screen.
+// display_flush() can still be called for compatibility.
 void font_draw_string(const font_t *font, int x, int y,
                       const char *str, uint16_t color);
 

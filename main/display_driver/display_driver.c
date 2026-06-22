@@ -9,8 +9,6 @@
 
 static const char *TAG = "display";
 
-static uint16_t *display_data = NULL;
-static esp_lcd_touch_handle_t tp = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 uint8_t brightness;
@@ -70,7 +68,7 @@ int display_brightness_get(void) {
 esp_err_t display_new() {
     esp_err_t ret = ESP_OK;
 
-    int max_transfer_sz = LCD_W * LCD_H * 2;
+    int max_transfer_sz = LCD_W * (int)sizeof(uint16_t);
 
     ESP_LOGI(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(LCD_PCLK, LCD_DATA0, LCD_DATA1, LCD_DATA2, LCD_DATA3, max_transfer_sz);
@@ -97,12 +95,6 @@ esp_err_t display_new() {
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_set_gap(panel_handle, 0x16, 0);
     esp_lcd_panel_disp_on_off(panel_handle, true);
-
-    display_data = heap_caps_malloc(LCD_W * LCD_H * sizeof(uint16_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    if(!display_data) {
-        ESP_LOGE(TAG, "Failed to allocate framebuffer!");
-        return ESP_ERR_INVALID_STATE;
-    }
 
     return ret;
 }
@@ -131,27 +123,55 @@ esp_err_t touch_new(esp_lcd_touch_handle_t *ret_touch) {
 }
 
 void display_flush(void) {
-    esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, LCD_W, LCD_H, display_data);
+    // Immediate-mode rendering: drawing APIs push data to panel directly.
+    // Kept as a no-op for API compatibility.
 }
 
 void display_set_pixel(int x, int y, uint16_t color) {
-    display_data[y * LCD_W + x] = color;
+    if (!panel_handle || x < 0 || x >= LCD_W || y < 0 || y >= LCD_H) return;
+    esp_lcd_panel_draw_bitmap(panel_handle, x, y, x + 1, y + 1, &color);
 }
 
 void display_fill(uint16_t color) {
+    if (!panel_handle) return;
+
     s_bg_color = color;
-    for(int i = 0; i < LCD_W * LCD_H; i++) display_data[i] = color;
+
+    uint16_t row[LCD_W];
+    for (int i = 0; i < LCD_W; i++) row[i] = color;
+    for (int y = 0; y < LCD_H; y++) {
+        esp_lcd_panel_draw_bitmap(panel_handle, 0, y, LCD_W, y + 1, row);
+    }
 }
 
 void display_draw_bitmap(int x, int y, int w, int h, const uint16_t *buf) {
-    for (int row = 0; row < h; row++) {
-        int py = y + row;
-        if (py < 0 || py >= LCD_H) continue;
-        for (int col = 0; col < w; col++) {
-            int px = x + col;
-            if (px < 0 || px >= LCD_W) continue;
-            display_data[py * LCD_W + px] = buf[row * w + col];
-        }
+    if (!panel_handle || !buf || w <= 0 || h <= 0) return;
+
+    int src_x0 = 0;
+    int src_y0 = 0;
+    int dst_x = x;
+    int dst_y = y;
+    int draw_w = w;
+    int draw_h = h;
+
+    if (dst_x < 0) {
+        src_x0 = -dst_x;
+        draw_w -= src_x0;
+        dst_x = 0;
+    }
+    if (dst_y < 0) {
+        src_y0 = -dst_y;
+        draw_h -= src_y0;
+        dst_y = 0;
+    }
+    if (dst_x + draw_w > LCD_W) draw_w = LCD_W - dst_x;
+    if (dst_y + draw_h > LCD_H) draw_h = LCD_H - dst_y;
+    if (draw_w <= 0 || draw_h <= 0) return;
+
+    for (int row = 0; row < draw_h; row++) {
+        const uint16_t *src_row = buf + (src_y0 + row) * w + src_x0;
+        int py = dst_y + row;
+        esp_lcd_panel_draw_bitmap(panel_handle, dst_x, py, dst_x + draw_w, py + 1, src_row);
     }
 }
 
