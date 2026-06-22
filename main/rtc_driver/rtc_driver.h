@@ -16,6 +16,15 @@ typedef struct {
     uint8_t year; // 2-digit offset from 2000 (e.g. 24 = 2024)
 } dtime_t;
 
+static const char *const RTC_WEEKDAY_NAMES[] = {
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+};
+
+static const char *const RTC_MONTH_NAMES[] = {
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+};
+
 typedef enum {
     RTC_TIMER_CLK_4096HZ = 0x00, // ~244 us per tick
     RTC_TIMER_CLK_64HZ   = 0x01, // ~15.6 ms per tick

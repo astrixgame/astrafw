@@ -21,7 +21,7 @@ typedef struct {
     uint8_t  box_w;         // bounding box width  (px)
     uint8_t  box_h;         // bounding box height (px)
     int8_t   ofs_x;         // left bearing  (px from cursor to left edge)
-    int8_t   ofs_y;         // top bearing   (px from baseline to top of glyph, positive = above)
+    int16_t  ofs_y;         // top bearing   (px from baseline to top of glyph, positive = above)
 } font_glyph_dsc_t;
 
 typedef struct {

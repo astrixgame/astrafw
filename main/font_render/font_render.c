@@ -97,9 +97,25 @@ static void draw_glyph(const font_t *font, const font_glyph_dsc_t *g,
     int draw_w = col_end - col_start;
     int draw_h = row_end - row_start;
     if (draw_w <= 0 || draw_h <= 0) return;
-    if (draw_w > GLYPH_BUF_MAX_W || draw_h > GLYPH_BUF_MAX_H) return;
 
     uint16_t bg = display_get_bg_color();
+
+    // Large glyph: draw directly pixel-by-pixel to avoid the fixed-size buffer limit
+    int row_stride = (g->box_w + 1) >> 1;  // bytes per bitmap row
+    if (draw_w > GLYPH_BUF_MAX_W || draw_h > GLYPH_BUF_MAX_H) {
+        for (int row = row_start; row < row_end; row++) {
+            for (int col = col_start; col < col_end; col++) {
+                int byte_idx = row * row_stride + (col >> 1);
+                uint8_t nibble = (col & 1)
+                    ? (bmp[byte_idx] & 0x0F)
+                    : (bmp[byte_idx] >> 4);
+                if (nibble == 0) continue;
+                uint8_t alpha = (uint8_t)((nibble << 4) | nibble);
+                display_set_pixel(gx + col, gy + row, blend_rgb565(color, bg, alpha));
+            }
+        }
+        return;
+    }
 
     // Fill buffer with background color
     for (int i = 0; i < draw_w * draw_h; i++) s_glyph_buf[i] = bg;
@@ -107,10 +123,10 @@ static void draw_glyph(const font_t *font, const font_glyph_dsc_t *g,
     // Render visible glyph pixels with alpha blend
     for (int row = row_start; row < row_end; row++) {
         for (int col = col_start; col < col_end; col++) {
-            int bit = row * g->box_w + col;
-            uint8_t nibble = (bit & 1)
-                ? (bmp[bit >> 1] & 0x0F)
-                : (bmp[bit >> 1] >> 4);
+            int byte_idx = row * row_stride + (col >> 1);
+            uint8_t nibble = (col & 1)
+                ? (bmp[byte_idx] & 0x0F)
+                : (bmp[byte_idx] >> 4);
             if (nibble == 0) continue;
             uint8_t alpha = (uint8_t)((nibble << 4) | nibble);
             int buf_idx = (row - row_start) * draw_w + (col - col_start);
